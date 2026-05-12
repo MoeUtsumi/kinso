@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>KINSO — 金相場AIアシスタント</title>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #C8A84B;
+  --gold2: #E5C97A;
+  --gold3: #8A6E2A;
+  --bg: #0A0A08;
+  --bg2: #111110;
+  --bg3: #181816;
+  --bg4: #1F1F1C;
+  --border: rgba(200,168,75,0.15);
+  --border2: rgba(200,168,75,0.08);
+  --text: #EDE8D8;
+  --text2: #9A9080;
+  --text3: #5A5448;
+  --green: #5BAD7A;
+  --red: #C96B5A;
+  --amber: #D4924A;
+  --r: 3px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+/* ── App Shell ── */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* ── Top Bar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border2);
+  flex-shrink: 0;
+  background: var(--bg);
+}
+.app-name {
+  font-family: 'Shippori Mincho', serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.15em;
+}
+.app-sub { font-size: 0.58rem; color: var(--text3); letter-spacing: 0.2em; margin-top: 1px; }
+.topbar-right { text-align: right; }
+#live-time { font-size: 0.65rem; color: var(--text3); }
+#live-date { font-size: 0.6rem; color: var(--gold3); margin-top: 2px; }
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border2);
+  flex-shrink: 0;
+  background: var(--bg);
+}
+.tab {
+  flex: 1;
+  padding: 10px 4px;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: var(--text3);
+  text-align: center;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  user-select: none;
+}
+.tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* ── Scrollable Content ── */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.page { display: none; padding: 16px; }
+.page.active { display: block; }
+
+/* ── Signal Card (top of home) ── */
+.signal-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.signal-bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--signal-col, var(--text3));
+  transition: background 0.4s;
+}
+.signal-pulse {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--signal-col, var(--text3));
+  box-shadow: 0 0 8px var(--signal-col, transparent);
+  flex-shrink: 0;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+.signal-body { flex: 1; }
+.signal-lbl { font-size: 0.56rem; letter-spacing: 0.2em; color: var(--text3); }
+.signal-val { font-family: 'Shippori Mincho', serif; font-size: 1.25rem; color: var(--text); margin-top: 3px; }
+.signal-sub { font-size: 0.62rem; color: var(--text2); margin-top: 4px; line-height: 1.5; }
+
+/* ── Price Row ── */
+.price-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.price-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 12px 10px;
+}
+.price-lbl { font-size: 0.54rem; color: var(--text3); letter-spacing: 0.1em; margin-bottom: 6px; }
+.price-val { font-family: 'Shippori Mincho', serif; font-size: 1.1rem; color: var(--gold2); line-height: 1; }
+.price-unit { font-size: 0.5rem; color: var(--text3); margin-top: 3px; }
+
+/* ── Section Header ── */
+.sec-hdr {
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  color: var(--text3);
+  margin: 16px 0 8px;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ── AI Quick Buttons ── */
+.ai-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ai-qbtn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 12px;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: left;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+}
+.ai-qbtn:active { background: var(--bg4); transform: scale(0.97); }
+.ai-qbtn-icon { font-size: 1.2rem; margin-bottom: 6px; display: block; }
+.ai-qbtn-title { font-size: 0.68rem; color: var(--gold); display: block; margin-bottom: 2px; }
+.ai-qbtn-desc { font-size: 0.58rem; color: var(--text3); line-height: 1.4; }
+
+/* ── Chat Area ── */
+.chat-wrap {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 120px);
+}
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overscroll-behavior: contain;
+}
+.msg {
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: var(--r);
+  font-size: 0.72rem;
+  line-height: 1.75;
+  animation: fadeUp 0.25s ease;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+.msg-user {
+  background: var(--gold3);
+  color: var(--text);
+  align-self: flex-end;
+  border-bottom-right-radius: 2px;
+}
+.msg-ai {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  align-self: flex-start;
+  border-bottom-left-radius: 2px;
+}
+.msg-ai strong { color: var(--gold2); font-weight: 400; }
+.msg-lbl { font-size: 0.52rem; color: var(--text3); margin-bottom: 4px; }
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  align-self: flex-start;
+  animation: fadeUp 0.2s ease;
+}
+.typing-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--gold3);
+  animation: typingBounce 1.2s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+
+/* ── Chat Input Bar ── */
+.chat-input-bar {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border2);
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.chat-input {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 9px 14px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  outline: none;
+  resize: none;
+  max-height: 100px;
+  line-height: 1.5;
+  transition: border-color 0.2s;
+}
+.chat-input:focus { border-color: var(--gold3); }
+.chat-input::placeholder { color: var(--text3); }
+.send-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.18s;
+  font-size: 0.85rem;
+}
+.send-btn:active { transform: scale(0.9); }
+.send-btn:disabled { background: var(--bg4); cursor: not-allowed; }
+
+/* ── Price Input Page ── */
+.input-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 16px;
+  margin-bottom: 10px;
+}
+.input-card-title { font-size: 0.62rem; color: var(--gold); letter-spacing: 0.15em; margin-bottom: 12px; }
+.field { margin-bottom: 12px; }
+.field-lbl { font-size: 0.58rem; color: var(--text3); letter-spacing: 0.15em; margin-bottom: 5px; }
+.field input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.field input:focus { border-color: var(--gold3); }
+.field input::placeholder { color: var(--text3); }
+.save-btn {
+  width: 100%;
+  background: var(--gold);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--r);
+  padding: 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+.save-btn:active { transform: scale(0.98); opacity: 0.85; }
+
+/* ── Indicator Bars ── */
+.indicator-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.ind {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 12px 14px;
+}
+.ind-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.ind-name { font-size: 0.62rem; color: var(--text2); }
+.ind-val { font-size: 0.62rem; color: var(--text); }
+.bar-bg { height: 3px; background: var(--bg4); border-radius: 2px; margin-bottom: 5px; }
+.bar-fg { height: 100%; border-radius: 2px; transition: width 1s ease; }
+.ind-sig { font-size: 0.58rem; }
+
+/* ── News Cards ── */
+.news-list { display: flex; flex-direction: column; gap: 8px; }
+.news-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+}
+.news-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.news-body { flex: 1; }
+.news-title { font-size: 0.68rem; color: var(--text); margin-bottom: 4px; }
+.news-desc { font-size: 0.62rem; color: var(--text2); line-height: 1.6; }
+.news-tag { font-size: 0.54rem; color: var(--text3); margin-top: 4px; }
+
+/* ── Profit Calc ── */
+.calc-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 16px;
+  margin-bottom: 10px;
+}
+.calc-title { font-size: 0.62rem; color: var(--gold); letter-spacing: 0.15em; margin-bottom: 12px; }
+.calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.calc-result {
+  background: var(--bg3);
+  border-radius: var(--r);
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  text-align: center;
+}
+.cr-lbl { font-size: 0.52rem; color: var(--text3); margin-bottom: 4px; }
+.cr-val { font-family: 'Shippori Mincho', serif; font-size: 1rem; }
+
+/* ── Checklist ── */
+.checklist { display: flex; flex-direction: column; gap: 8px; }
+.check-item {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.check-item:active { background: var(--bg3); }
+.check-box2 {
+  width: 18px; height: 18px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  font-size: 10px;
+}
+.check-box2.done { background: var(--gold); border-color: var(--gold); color: var(--bg); }
+.check-txt { font-size: 0.68rem; color: var(--text2); line-height: 1.4; }
+.check-txt.done { text-decoration: line-through; color: var(--text3); }
+.progress-bar-wrap { height: 3px; background: var(--bg4); border-radius: 2px; margin-bottom: 12px; }
+.progress-bar { height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.4s ease; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%; transform: translateX(-50%);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-size: 0.68rem;
+  color: var(--gold);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 100;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+
+/* ── Bottom Nav ── */
+.bottom-nav {
+  display: flex;
+  border-top: 1px solid var(--border2);
+  background: var(--bg);
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.nav-btn {
+  flex: 1;
+  padding: 10px 4px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.2s;
+  color: var(--text3);
+  user-select: none;
+}
+.nav-btn.active { color: var(--gold); }
+.nav-icon { font-size: 1.2rem; display: block; margin-bottom: 2px; }
+.nav-lbl { font-size: 0.5rem; letter-spacing: 0.1em; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div>
+      <div class="app-name">KINSO</div>
+      <div class="app-sub">金相場 AI アシスタント</div>
+    </div>
+    <div class="topbar-right">
+      <div id="live-time"></div>
+      <div id="live-date"></div>
+    </div>
+  </div>
+
+  <!-- Tabs (for home page sections) -->
+  <div class="tabs" id="home-tabs" style="display:none;">
+    <div class="tab active" onclick="switchTab('overview')">概況</div>
+    <div class="tab" onclick="switchTab('signals')">シグナル</div>
+    <div class="tab" onclick="switchTab('news')">ニュース</div>
+    <div class="tab" onclick="switchTab('calc')">計算</div>
+  </div>
+
+  <!-- Content -->
+  <div class="content" id="main-content">
+
+    <!-- ─ HOME ─ -->
+    <div class="page active" id="page-home">
+      <!-- Sub tabs content -->
+      <div id="tab-overview">
+        <!-- Signal -->
+        <div class="signal-card" id="sig-card">
+          <div class="signal-bar" id="sig-bar"></div>
+          <div class="signal-pulse" id="sig-pulse"></div>
+          <div class="signal-body">
+            <div class="signal-lbl">総合シグナル</div>
+            <div class="signal-val" id="sig-val">🟡 様子見・調整局面</div>
+            <div class="signal-sub" id="sig-sub">強弱材料が混在。大量仕入れは慎重に、在庫の利益確定を優先。</div>
+          </div>
+        </div>
+        <!-- Prices -->
+        <div class="price-row">
+          <div class="price-card">
+            <div class="price-lbl">国内金価格</div>
+            <div class="price-val" id="p-jpy">25,512</div>
+            <div class="price-unit">円/g</div>
+          </div>
+          <div class="price-card">
+            <div class="price-lbl">国際金価格</div>
+            <div class="price-val" id="p-usd">4,570</div>
+            <div class="price-unit">USD/oz</div>
+          </div>
+          <div class="price-card">
+            <div class="price-lbl">ドル円</div>
+            <div class="price-val" id="p-fx">145</div>
+            <div class="price-unit">JPY/USD</div>
+          </div>
+        </div>
+        <!-- AI Quick -->
+        <div class="sec-hdr"><span>AIクイック分析</span></div>
+        <div class="ai-grid">
+          <div class="ai-qbtn" onclick="quickAsk('tomorrow')">
+            <span class="ai-qbtn-icon">📈</span>
+            <span class="ai-qbtn-title">明日の予測</span>
+            <span class="ai-qbtn-desc">明日の価格レンジと根拠をAIが分析</span>
+          </div>
+          <div class="ai-qbtn" onclick="quickAsk('signal')">
+            <span class="ai-qbtn-icon">🎯</span>
+            <span class="ai-qbtn-title">買い/売り判断</span>
+            <span class="ai-qbtn-desc">今日のシグナルをスコアで判定</span>
+          </div>
+          <div class="ai-qbtn" onclick="quickAsk('advice')">
+            <span class="ai-qbtn-icon">💼</span>
+            <span class="ai-qbtn-title">仕入れアドバイス</span>
+            <span class="ai-qbtn-desc">今週の仕入れ戦略を提案</span>
+          </div>
+          <div class="ai-qbtn" onclick="quickAsk('news')">
+            <span class="ai-qbtn-icon">📰</span>
+            <span class="ai-qbtn-title">ニュース影響</span>
+            <span class="ai-qbtn-desc">最新ニュースの相場影響を解説</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signals tab -->
+      <div id="tab-signals" style="display:none;">
+        <div class="sec-hdr"><span>シグナル指標</span><span id="score-lbl" style="color:var(--gold)">— /100</span></div>
+        <div class="indicator-list" id="ind-list"></div>
+      </div>
+
+      <!-- News tab -->
+      <div id="tab-news" style="display:none;">
+        <div class="sec-hdr"><span>最新ニュース（2026年5月）</span></div>
+        <div class="news-list" id="news-list"></div>
+      </div>
+
+      <!-- Calc tab -->
+      <div id="tab-calc" style="display:none;">
+        <div class="calc-card">
+          <div class="calc-title">仕入れ利益シミュレーター</div>
+          <div class="calc-grid">
+            <div class="field">
+              <div class="field-lbl">仕入れ価格（円/g）</div>
+              <input type="number" id="c-buy" value="25512" oninput="calcProfit()">
+            </div>
+            <div class="field">
+              <div class="field-lbl">仕入れ量（g）</div>
+              <input type="number" id="c-w" value="10" oninput="calcProfit()">
+            </div>
+            <div class="field">
+              <div class="field-lbl">販売価格（円/g）</div>
+              <input type="number" id="c-sell" value="28000" oninput="calcProfit()">
+            </div>
+            <div class="field">
+              <div class="field-lbl">その他コスト（円）</div>
+              <input type="number" id="c-cost" value="0" oninput="calcProfit()">
+            </div>
+          </div>
+          <div class="calc-result">
+            <div><div class="cr-lbl">仕入れ総額</div><div class="cr-val" id="r-cost">—</div></div>
+            <div><div class="cr-lbl">売上総額</div><div class="cr-val" id="r-sell">—</div></div>
+            <div><div class="cr-lbl">利益/利益率</div><div class="cr-val" id="r-profit">—</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─ AI CHAT ─ -->
+    <div class="page" id="page-chat">
+      <div class="chat-wrap">
+        <div class="chat-messages" id="chat-messages">
+          <div class="msg msg-ai">
+            <div class="msg-lbl">KINSO AI</div>
+            こんにちは。金相場について何でも聞いてください。<br><br>
+            例えば：<br>
+            「今日の相場を分析して」<br>
+            「今週は仕入れるべき？」<br>
+            「ドル円が円高になったら金価格は？」
+          </div>
+        </div>
+        <div class="chat-input-bar">
+          <textarea class="chat-input" id="chat-input" rows="1" placeholder="質問を入力..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="send-btn" id="send-btn" onclick="sendChat()">↑</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─ PRICE INPUT ─ -->
+    <div class="page" id="page-price">
+      <div class="input-card">
+        <div class="input-card-title">本日の価格を入力</div>
+        <div class="field">
+          <div class="field-lbl">国内金価格（円/g）</div>
+          <input type="number" id="in-jpy" placeholder="例: 25512">
+        </div>
+        <div class="field">
+          <div class="field-lbl">国際金価格（USD/oz）</div>
+          <input type="number" id="in-usd" placeholder="例: 4570">
+        </div>
+        <div class="field">
+          <div class="field-lbl">ドル円レート</div>
+          <input type="number" id="in-fx" placeholder="例: 145">
+        </div>
+        <button class="save-btn" onclick="savePrices()">保存して反映する</button>
+      </div>
+      <div style="font-size:0.6rem;color:var(--text3);line-height:1.8;padding:4px 2px;">
+        ※ 価格は田中貴金属などで毎日確認してください。<br>
+        入力した価格はAI分析に自動で反映されます。<br>
+        <a href="https://gold.tanaka.co.jp" target="_blank" style="color:var(--gold3);">→ 田中貴金属</a>&nbsp;&nbsp;
+        <a href="https://www.mobile.bloomberg.com/quote/XAUUSD:CUR" target="_blank" style="color:var(--gold3);">→ 国際価格（Bloomberg）</a>
+      </div>
+
+      <!-- Checklist -->
+      <div class="sec-hdr" style="margin-top:20px;"><span>毎日チェックリスト</span><span id="chk-prog">0/7</span></div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="chk-bar" style="width:0%"></div></div>
+      <div class="checklist" id="checklist"></div>
+    </div>
+
+  </div><!-- end content -->
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <div class="nav-btn active" id="nav-home" onclick="switchPage('home')">
+      <span class="nav-icon">◈</span>
+      <span class="nav-lbl">ホーム</span>
+    </div>
+    <div class="nav-btn" id="nav-chat" onclick="switchPage('chat')">
+      <span class="nav-icon">◎</span>
+      <span class="nav-lbl">AI チャット</span>
+    </div>
+    <div class="nav-btn" id="nav-price" onclick="switchPage('price')">
+      <span class="nav-icon">◇</span>
+      <span class="nav-lbl">価格入力</span>
+    </div>
+  </div>
+
+</div><!-- end app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────
+// State
+// ─────────────────────────────────────────
+let prices = JSON.parse(localStorage.getItem('kinso-prices') || '{"jpy":25512,"usd":4570,"fx":145}');
+let checkStates = JSON.parse(localStorage.getItem('kinso-checks') || 'null') || Array(7).fill(false);
+let currentPage = 'home';
+let currentTab = 'overview';
+let chatHistory = [];
+let isAiLoading = false;
+
+// ─────────────────────────────────────────
+// Clock
+// ─────────────────────────────────────────
+function tick() {
+  const now = new Date();
+  document.getElementById('live-time').textContent = now.toLocaleTimeString('ja-JP', {timeZone:'Asia/Tokyo'});
+  document.getElementById('live-date').textContent = now.toLocaleDateString('ja-JP', {month:'2-digit',day:'2-digit',weekday:'short',timeZone:'Asia/Tokyo'});
+}
+tick(); setInterval(tick, 1000);
+
+// ─────────────────────────────────────────
+// Navigation
+// ─────────────────────────────────────────
+function switchPage(page) {
+  currentPage = page;
+  ['home','chat','price'].forEach(p => {
+    document.getElementById('page-'+p).classList.toggle('active', p===page);
+    document.getElementById('nav-'+p).classList.toggle('active', p===page);
+  });
+  const homeTabs = document.getElementById('home-tabs');
+  homeTabs.style.display = page === 'home' ? 'flex' : 'none';
+  if (page === 'chat') {
+    setTimeout(() => document.getElementById('chat-input').focus(), 300);
+  }
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const tabs = ['overview','signals','news','calc'];
+    t.classList.toggle('active', tabs[i]===tab);
+  });
+  ['overview','signals','news','calc'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
+  });
+}
+
+// Show home tabs
+document.getElementById('home-tabs').style.display = 'flex';
+
+// ─────────────────────────────────────────
+// Prices
+// ─────────────────────────────────────────
+function updatePriceDisplay() {
+  document.getElementById('p-jpy').textContent = prices.jpy.toLocaleString();
+  document.getElementById('p-usd').textContent = prices.usd.toLocaleString();
+  document.getElementById('p-fx').textContent = prices.fx;
+}
+updatePriceDisplay();
+
+function savePrices() {
+  const j = document.getElementById('in-jpy').value;
+  const u = document.getElementById('in-usd').value;
+  const f = document.getElementById('in-fx').value;
+  if (j) prices.jpy = parseFloat(j);
+  if (u) prices.usd = parseFloat(u);
+  if (f) prices.fx = parseFloat(f);
+  localStorage.setItem('kinso-prices', JSON.stringify(prices));
+  updatePriceDisplay();
+  showToast('価格を更新しました ✓');
+}
+
+// ─────────────────────────────────────────
+// Signal
+// ─────────────────────────────────────────
+const indicators = [
+  { name:'FRB金利方向性',    val:'据え置き',      score:38, sig:'⚠ 利上げリスク残存', type:'sell' },
+  { name:'ドル/円',          val:'145円台',        score:52, sig:'△ 円安で国内価格↑', type:'neutral' },
+  { name:'地政学リスク',     val:'高・緊張継続',   score:65, sig:'✅ 金需要を下支え',  type:'buy' },
+  { name:'国際需要（WGC）',  val:'過去最高水準',   score:75, sig:'✅ 需要サイド強い',  type:'buy' },
+  { name:'価格水準',         val:'歴史的高値圏',   score:28, sig:'⚠ 割高リスクあり',  type:'sell' },
+  { name:'インフレ懸念',     val:'上昇圧力',       score:44, sig:'△ 金利との綱引き',  type:'neutral' },
+];
+
+const avg = indicators.reduce((s,i)=>s+i.score,0)/indicators.length;
+document.getElementById('score-lbl').textContent = Math.round(avg)+'/100';
+
+// Signal card
+const sigCard = document.getElementById('sig-card');
+const sigBar  = document.getElementById('sig-bar');
+const sigPulse = document.getElementById('sig-pulse');
+if (avg >= 65) {
+  const c = 'var(--green)';
+  sigBar.style.background = sigPulse.style.background = sigPulse.style.boxShadow = c;
+  document.getElementById('sig-val').textContent = '🟢 買い検討局面';
+  document.getElementById('sig-sub').textContent = '需要強く地政学リスクが下支え。分散仕入れ推奨。';
+} else if (avg >= 45) {
+  const c = 'var(--amber)';
+  sigBar.style.background = c; sigPulse.style.background = c;
+  document.getElementById('sig-val').textContent = '🟡 様子見・調整局面';
+  document.getElementById('sig-sub').textContent = '強弱材料が混在。在庫の利益確定を優先するタイミング。';
+} else {
+  const c = 'var(--red)';
+  sigBar.style.background = c; sigPulse.style.background = c;
+  document.getElementById('sig-val').textContent = '🔴 売り検討局面';
+  document.getElementById('sig-sub').textContent = '仕入れ控えめにし、高値で在庫を捌くことを優先。';
+}
+
+// Indicator list
+const indList = document.getElementById('ind-list');
+indicators.forEach(ind => {
+  const col = ind.type==='buy' ? 'var(--green)' : ind.type==='sell' ? 'var(--red)' : 'var(--amber)';
+  const div = document.createElement('div');
+  div.className = 'ind';
+  div.innerHTML = `
+    <div class="ind-row">
+      <span class="ind-name">${ind.name}</span>
+      <span class="ind-val">${ind.val}</span>
+    </div>
+    <div class="bar-bg"><div class="bar-fg" style="width:${ind.score}%;background:${col}"></div></div>
+    <div class="ind-sig" style="color:${col}">${ind.sig}</div>`;
+  indList.appendChild(div);
+});
+
+// ─────────────────────────────────────────
+// News
+// ─────────────────────────────────────────
+const newsData = [
+  { color:'var(--red)',   title:'ホルムズ海峡 米・イラン衝突継続（10週目）', desc:'エネルギー価格急騰→インフレ懸念→金利上昇圧力。金価格の上値を抑える方向。', tag:'🔴 売り圧力 / 5月4〜5日' },
+  { color:'var(--red)',   title:'国内金価格 5月1日 25,512円/g（続落）', desc:'前日比141円安。円買い介入観測と為替急反転が円建て金価格を押し下げ。', tag:'🔴 売り圧力 / 5月1日' },
+  { color:'var(--amber)', title:'FRB 金利据え置き→金価格反発 4,570ドル台', desc:'ドル安・原油下落を受けて反発。利下げ転換の兆しで急反発の可能性あり。', tag:'🟡 要注視 / FOMC動向に注目' },
+  { color:'var(--green)', title:'WGC: 2026年Q1 金需要 過去最高水準', desc:'前年比+2%、1,231トン。金地金・コイン投資と中銀買いが相場を下支え。', tag:'🟢 買い支援 / 長期的好材料' },
+  { color:'var(--green)', title:'各国中央銀行 金購入を継続拡大', desc:'中国・トルコ・インド等が購入継続。ゴールドマン年末目標4,900ドル。', tag:'🟢 買い支援 / 構造的需要' },
+  { color:'var(--amber)', title:'円安継続（145円台）— 日銀介入観測も', desc:'国際価格が横ばいでも円建て価格は高止まり。介入で急変動リスクあり。', tag:'🟡 要注視 / 毎日確認推奨' },
+];
+const newsList = document.getElementById('news-list');
+newsData.forEach(n => {
+  newsList.innerHTML += `
+    <div class="news-card">
+      <div class="news-dot" style="background:${n.color}"></div>
+      <div class="news-body">
+        <div class="news-title">${n.title}</div>
+        <div class="news-desc">${n.desc}</div>
+        <div class="news-tag">${n.tag}</div>
+      </div>
+    </div>`;
+});
+
+// ─────────────────────────────────────────
+// Profit Calc
+// ─────────────────────────────────────────
+function calcProfit() {
+  const bp = parseFloat(document.getElementById('c-buy').value)||0;
+  const bw = parseFloat(document.getElementById('c-w').value)||0;
+  const sp = parseFloat(document.getElementById('c-sell').value)||0;
+  const oc = parseFloat(document.getElementById('c-cost').value)||0;
+  const cost = bp*bw+oc, sell = sp*bw, profit = sell-cost;
+  const margin = cost>0 ? (profit/cost*100).toFixed(1) : 0;
+  const fmt = v => Math.abs(v)>=10000 ? (v/10000).toFixed(1)+'万' : v.toLocaleString();
+  document.getElementById('r-cost').textContent = fmt(cost)+'円';
+  document.getElementById('r-sell').textContent = fmt(sell)+'円';
+  const rp = document.getElementById('r-profit');
+  rp.textContent = fmt(profit)+'円\n'+margin+'%';
+  rp.style.color = profit>=0 ? 'var(--green)' : 'var(--red)';
+}
+calcProfit();
+
+// ─────────────────────────────────────────
+// Checklist
+// ─────────────────────────────────────────
+const checkItems = [
+  '田中貴金属で今日の価格を確認した',
+  'ドル円レートをチェックした',
+  'アプリに価格を入力した',
+  '中東・地政学ニュースを確認した',
+  'FRB関連ニュースを確認した',
+  '今日の買い/売り判断を決めた',
+  '明日の価格リスクを想定した',
+];
+const cl = document.getElementById('checklist');
+function renderChecks() {
+  cl.innerHTML = '';
+  checkItems.forEach((txt, i) => {
+    const div = document.createElement('div');
+    div.className = 'check-item';
+    div.innerHTML = `<div class="check-box2 ${checkStates[i]?'done':''}">
+      ${checkStates[i]?'✓':''}</div>
+      <div class="check-txt ${checkStates[i]?'done':''}">${txt}</div>`;
+    div.onclick = () => {
+      checkStates[i] = !checkStates[i];
+      localStorage.setItem('kinso-checks', JSON.stringify(checkStates));
+      renderChecks();
+    };
+    cl.appendChild(div);
+  });
+  const done = checkStates.filter(Boolean).length;
+  document.getElementById('chk-prog').textContent = done+'/'+checkItems.length;
+  document.getElementById('chk-bar').style.width = (done/checkItems.length*100)+'%';
+}
+renderChecks();
+
+// ─────────────────────────────────────────
+// AI Context Builder
+// ─────────────────────────────────────────
+function buildContext() {
+  const today = new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short',timeZone:'Asia/Tokyo'});
+  return `【本日の価格データ（${today}）】
+国内金価格: ${prices.jpy.toLocaleString()}円/g　国際金価格: ${prices.usd.toLocaleString()}USD/oz　ドル円: ${prices.fx}円
+
+【最新市場背景】
+・ホルムズ海峡で米・イラン軍事衝突10週目、エネルギー価格急騰・インフレ懸念
+・FRB金利据え置き、利下げ時期は不透明
+・WGC: 2026年Q1金需要 前年比+2%（1,231t）、過去最高水準
+・各国中央銀行が金購入継続（中国・トルコ・インド等）
+・円安145円台継続、日銀介入観測あり
+・ゴールドマン・サックス年末目標: 4,900ドル
+
+あなたはジュエリー業者専門の金相場アナリストです。日本語で、具体的・実践的に回答してください。`;
+}
+
+// ─────────────────────────────────────────
+// Quick Buttons → goes to chat
+// ─────────────────────────────────────────
+const quickPrompts = {
+  tomorrow: '明日の国内金価格の予測レンジと根拠、および明日の仕入れ判断を教えてください。',
+  signal: '今日の買い・売りシグナルを100点満点でスコア化し、推奨アクションを教えてください。',
+  advice: '今週の仕入れ方針、価格交渉のポイント、在庫管理アドバイスを教えてください。',
+  news: '最新ニュースが金相場とジュエリービジネスに与える影響を分析してください。',
+};
+
+function quickAsk(type) {
+  switchPage('chat');
+  setTimeout(() => {
+    document.getElementById('chat-input').value = quickPrompts[type];
+    sendChat();
+  }, 200);
+}
+
+// ─────────────────────────────────────────
+// Chat
+// ─────────────────────────────────────────
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100)+'px';
+}
+
+function handleKey(e) {
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+function scrollChat() {
+  const msgs = document.getElementById('chat-messages');
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addMsg(role, text) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'msg msg-'+role;
+  if (role==='ai') {
+    div.innerHTML = `<div class="msg-lbl">KINSO AI</div>`
+      + text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+             .replace(/【(.*?)】/g,'<strong>【$1】</strong>');
+  } else {
+    div.textContent = text;
+  }
+  msgs.appendChild(div);
+  scrollChat();
+  return div;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'typing-indicator';
+  div.id = 'typing';
+  div.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+  msgs.appendChild(div);
+  scrollChat();
+}
+
+function hideTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+async function sendChat() {
+  if (isAiLoading) return;
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = ''; input.style.height = 'auto';
+  addMsg('user', text);
+  chatHistory.push({ role:'user', content: text });
+
+  isAiLoading = true;
+  document.getElementById('send-btn').disabled = true;
+  showTyping();
+
+  // Build messages with system context
+  const systemMsg = buildContext();
+  const messages = [
+    { role:'user', content: systemMsg+'\n\n'+chatHistory[0].content },
+    ...chatHistory.slice(1)
+  ];
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages
+      })
+    });
+    const json = await res.json();
+    const reply = json.content?.map(c=>c.text||'').join('') || 'エラーが発生しました。';
+    hideTyping();
+    addMsg('ai', reply);
+    chatHistory.push({ role:'assistant', content: reply });
+  } catch(e) {
+    hideTyping();
+    addMsg('ai', '通信エラーが発生しました。しばらくしてから再度お試しください。');
+  }
+
+  isAiLoading = false;
+  document.getElementById('send-btn').disabled = false;
+}
+
+// ─────────────────────────────────────────
+// Toast
+// ─────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
